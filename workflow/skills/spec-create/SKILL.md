@@ -13,17 +13,33 @@ Read the following files before executing this skill. All commands, paths, tool 
 
 Generate spec. Input: `$ARGUMENTS`
 
-⛔ NO FILES WRITTEN until Step 7. Steps 1–6 are read and output only.
+⛔ NO FILES WRITTEN until Step 7. Steps 0–6 are read and output only.
+
+---
+
+## Step 0 — Verify active decisions
+
+Invoke `/decision-verify`. Cheap when no DEC has a `Verifies:` block.
+
+- If all checks pass (or there are none) → continue to Step 1.
+- If any check fails → STOP. Output the failure list and one of these paths:
+  - The failing rule reflects code drift → fix the violation, re-run `/decision-verify`, then resume `/spec-create`.
+  - The failing rule reflects an outdated decision → run `/decision-sync` to supersede the DEC, then resume.
+- Do NOT bypass with `--allow-failures`. New specs MUST NOT be built on top of violated decisions.
 
 ---
 
 ## Step 1 — Read context
 
-1. `docs/MAP.md` → load relevant ctx files for `$ARGUMENTS`
-2. `PROGRESS.md` → current phase, next spec number
-3. `docs/DECISIONS.md`
-4. `specs/spec-template.md`
-5. Most recently completed spec in `specs/`
+1. docs/ARCHITECTURE.md (full)
+2. docs/DECISIONS.md (full)
+3. docs/COMPONENT-LIBRARY.md if exists
+4. docs/DESIGN-SYSTEM.md if exists
+5. .rossflow/design-source-index.json if exists
+6. docs/PATTERNS.md (index, then targeted grep)
+7. existing specs (for ordering)
+
+Also: `PROGRESS.md` → current phase, next spec number; `specs/spec-template.md`; most recently completed spec in `specs/`.
 
 If `$ARGUMENTS` is a path to existing spec (contains `/` or ends `.md`) → read it. It is input only — will be fully regenerated and overwritten at Step 7.
 
@@ -77,10 +93,22 @@ Open questions
 Flag: 🔴 / 🟡 / ✅ — <reason>
 ```
 
-Flag rules:
-- 🔴 touches 2+ existing interfaces | no decision coverage | dependency for 3+ specs | critical business rules | required by project non-negotiables but marked out-of-scope while all dependencies are already available in this spec
-- 🟡 modifies existing interface | external I/O
+The outline MUST include:
+- DEC alignment: list every DEC-NNN this spec assumes. If any DEC would be contradicted, STOP and propose supersession via decision-sync first.
+- Components consumed: list COMPONENT-LIBRARY.md entries reused. If a library component is being inlined, REJECT outline.
+- New components proposed: must be added to COMPONENT-LIBRARY.md first via separate approval.
+- Visual acceptance source (screen specs): cite design-source HTML + asset list.
+
+**Flag rules (HARD STOP on 🔴):**
+- 🔴 spec touches 2+ existing interfaces | no DEC coverage | new architectural pattern | dependency for 3+ specs
+- 🟡 modifies existing interface | external I/O | new third-party dep
 - ✅ none of above
+
+If 🔴: skill MUST halt. Require either:
+(a) supersede relevant DEC via decision-sync, OR
+(b) propose new DEC, get user approval, before resuming.
+
+"Looks good"/"approved" DOES NOT bypass 🔴. User must explicitly say "ignore flag, proceed anyway, accept risk" — and skill warns this is unusual.
 
 ### Block 2:
 ```
@@ -116,10 +144,13 @@ Say "approved" to write, or tell me what to change.
 
 ⛔ NO FILES WRITTEN IN THIS STEP.
 
-Generate full spec using `specs/spec-template.md` structure. Fill every section — no TBD.
+For UI screen specs: route to `workflow/templates/screen-spec.md`. Auto-populate Visual Acceptance from `.rossflow/design-source-index.json`. Set `type: screen` in frontmatter.
+For all other specs: use `specs/spec-template.md`.
+
+Fill every section — no TBD.
 Contracts: signatures + types only, no bodies.
 Every external I/O: at least one failure path.
-All signatures consistent with loaded ctx files.
+All signatures consistent with loaded ARCHITECTURE.md, DECISIONS.md, COMPONENT-LIBRARY.md, DESIGN-SYSTEM.md.
 
 **Contracts checklist:**
 - Types that configure behavior: document valid ranges/constraints in field comments; specify what the constructor does when constraints are violated.

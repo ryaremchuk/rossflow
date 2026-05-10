@@ -123,5 +123,15 @@ Bug reports:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-All passed → `Next: /context-sync → /ship`
+All passed → `Next: /decision-sync → /ship`
 Failures → `Review bug reports in bugs/. Fix manually or run /bug-fix $ARGUMENTS when ready.`
+
+---
+
+## Step 6 — UI fidelity (screen specs only)
+
+If spec frontmatter has `type: screen`:
+- Invoke `ui-fidelity-check` skill with this spec's files + design source reference.
+- Treat ui-fidelity-check failures as smoke test failures (file bug reports, route to bug-fix).
+
+Smoke status `passing` requires both standard smoke AND ui-fidelity-check passing.

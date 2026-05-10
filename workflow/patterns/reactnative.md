@@ -196,3 +196,13 @@ DON'T:
 ### Direct AsyncStorage in Components
 Reading/writing AsyncStorage directly in components. Logic scattered, no error handling.
 → Wrap in a typed storage service module. Components call service methods.
+
+---
+
+## Hard caps (RN-specific, enforced by /simplify and CI)
+
+- **FlatList for any list rendering >10 items.** No `.map()` inside `<ScrollView>` for variable-length lists.
+- **`useSafeAreaInsets()` for top/bottom padding.** No `paddingTop: <literal>` or `paddingBottom: <literal>` for safe-area positioning.
+- **No inline `#hex` outside `src/constants/`.** All colors via typed token const.
+
+Same cap on screen file LOC (≤250) inherits from principles.md.

@@ -18,24 +18,11 @@ Read in order:
 2. `.claude/workflow-infra.md`
 3. `.claude/workflow-git.md`
 4. `.claude/workflow-smoke.md`
-5. `docs/patterns/PATTERNS.md` — note available pattern file names
+5. `docs/patterns/INDEX.md` — note available pattern file names
 6. `CLAUDE.md` — check for existing project description
+7. Scan project root for design-source candidates: `claude-design-source/`, `design/`, `figma-export/`, `mockups/`, `*.fig`, `*.html` at root. Set `DESIGN_SOURCE_FOUND=true|false` and record paths.
 
-**Re-run detection:** if `docs/ARCHITECTURE.md` has content beyond the template placeholder text, this is a re-run on an existing project. Output:
-
-```
-⚠️  project-init-new has been run before on this project.
-
-Files with existing content:
-- docs/ARCHITECTURE.md
-- [list any .claude/workflow-*.md files that have values filled in]
-
-Continuing will update these files. Existing values will be shown before any overwrite.
-
-Continue? (yes / no)
-```
-
-⛔ STOP. Wait for confirmation before proceeding. If "no" — halt.
+**Re-run detection:** if `docs/ARCHITECTURE.md` has content beyond the template placeholder, OR any `.claude/workflow-*.md` has filled values, this is a re-run. Output a warning listing the files with existing content, state that existing values will be shown before any overwrite, and ask `Continue? (yes / no)`. ⛔ STOP. Halt on "no".
 
 ---
 
@@ -91,97 +78,89 @@ Update table based on feedback. Repeat until developer explicitly approves. On a
 Stack locked. Moving to architecture.
 ```
 
-Hold all values and map them to config keys:
+Hold all values and map them to config keys.
 
-**workflow-config.md fields:**
-- `project_name` — derived from project name (lowercase-kebab)
-- `backend_lang` — from backend language choice
-- `package_manager` — from package manager choice
-- `frontend_lang` — typescript | javascript | none
-- `test_runner` — from backend testing choice
-- `typecheck_cmd` — derive from backend lang (e.g. `uv run mypy {files} --strict` for Python+uv)
-- `lint_cmd` — derive from backend lang (e.g. `uv run ruff check {files}`)
-- `test_cmd` — derive from test runner (e.g. `uv run pytest {test_dir} -v --tb=short`)
-- `frontend_typecheck_cmd` — derive from frontend choice; `none` if no frontend
-- `frontend_lint_cmd` — derive from frontend choice; `none` if no frontend
-- `frontend_test_cmd` — derive from frontend choice; `none` if no frontend
-- `backend_dir` — derive from stack convention (e.g. `backend` for Python, `src` for Go)
-- `frontend_dir` — derive from stack convention; `none` if no frontend
-- `test_dir` — derive from backend_dir convention (e.g. `backend/tests`)
-- `specs_dir`: specs | `smoke_tests_dir`: smoke-tests | `bugs_dir`: bugs | `docs_dir`: docs
+**workflow-config.md** — `project_name` (kebab from project name), `backend_lang`, `package_manager`, `frontend_lang` (typescript | javascript | none), `test_runner`. Commands derive from chosen tools — `typecheck_cmd` (e.g. `uv run mypy {files} --strict`), `lint_cmd` (e.g. `uv run ruff check {files}`), `test_cmd` (e.g. `uv run pytest {test_dir} -v --tb=short`). `frontend_typecheck_cmd` / `frontend_lint_cmd` / `frontend_test_cmd` derive from frontend choice; `none` if no frontend. `backend_dir` from stack convention (`backend` Python, `src` Go), `frontend_dir` (`none` if no frontend), `test_dir` (e.g. `backend/tests`). Fixed: `specs_dir`=specs, `smoke_tests_dir`=smoke-tests, `bugs_dir`=bugs, `docs_dir`=docs.
 
-**workflow-infra.md fields:**
-- `type` — orchestrator type: docker-compose | kubernetes | none
-- `backend_service` — service name in orchestrator config (e.g. `backend`); none if no orchestrator
-- `frontend_service` — e.g. `frontend`; none if no frontend
-- `db_service` — e.g. `postgres`; none if no orchestrator
-- `backend_port` — standard port for chosen backend (e.g. 8000 for FastAPI, 3000 for Express)
-- `frontend_port` — standard port for chosen frontend; none if no frontend
-- `db_type` — postgresql | mysql | sqlite | mongodb | none
-- `db_url` — derive from db_type and project_name (e.g. `postgresql://localhost/[project_name]`)
-- `db_query_tool` — psql | mysql | sqlite3 | none
-- `db_migration_tool` — alembic | flyway | prisma | liquibase | none
+**workflow-infra.md** — `type` (docker-compose | kubernetes | none); `backend_service` / `frontend_service` / `db_service` (`none` if not present); `backend_port` (8000 FastAPI, 3000 Express, …); `frontend_port` (`none` if no frontend); `db_type` (postgresql | mysql | sqlite | mongodb | none); `db_url` derived from db_type + project_name (e.g. `postgresql://localhost/[project_name]`); `db_query_tool` (psql | mysql | sqlite3 | none); `db_migration_tool` (alembic | flyway | prisma | liquibase | none).
 
-**workflow-git.md fields:**
-- `branch_prefix`: feat
-- `main_branch`: main
-- `commit_scopes` — comma-separated list of layers present (e.g. `backend,frontend,infra`)
-- `pr_tool` — from PR tool choice; none if not applicable
+**workflow-git.md** — `branch_prefix`=feat, `main_branch`=main, `commit_scopes` csv of layers present (e.g. `backend,frontend,infra`), `pr_tool` from PR tool choice (`none` if not applicable).
 
-**workflow-smoke.md fields:**
-- `ui_driver` — from UI testing choice: playwright | cypress | maestro | none
-- `ui_script_lang` — derive from ui_driver choice: javascript | typescript | python | none
-- `ui_script_lang_ext` — derive from ui_script_lang: js | ts | py | none
-- `tmp_script_prefix`: smoke-tests/.tmp-
-- `log_tail_backend`: 50
-- `log_tail_frontend`: 30
+**workflow-smoke.md** — `ui_driver` (playwright | cypress | maestro | none); `ui_script_lang` derived (javascript | typescript | python | none); `ui_script_lang_ext` derived (js | ts | py | none); `tmp_script_prefix`=smoke-tests/.tmp-, `log_tail_backend`=50, `log_tail_frontend`=30.
+
+---
+
+## Phase 2.5 — Design source discovery
+
+If `DESIGN_SOURCE_FOUND=true`: list the inventory at the discovered path (HTML mockups, CSS/token files, asset folders, JSX/scripts, system docs) and state the extraction targets — `DESIGN-SYSTEM.md` (tokens + asset inventory + visual rules), `COMPONENT-LIBRARY.md` (reusable component proposals), `design-source-index.json` (machine-readable per-screen index). Ask "Proceed with extraction?" ⛔ STOP. Independent approval gate. On approval, invoke `design-source-extract` with the path; then continue.
+
+If `DESIGN_SOURCE_FOUND=false`: ask the developer to pick (a) point at folder → re-scan + extract; (b) interview-only, no visual reference; (c) provide screenshots/links later — proceed without. ⛔ STOP. Independent approval gate. For (b)/(c), mark a DEC requirement to record this in DECISIONS.md.
+
+Hold for project-init-write: `design_source_path`, `design_source_status` (extracted | pointed | absent | deferred).
 
 ---
 
 ## Phase 3 — Architecture
 
-Using the approved stack and project description, propose a high-level architecture.
+Use approved stack + project description + (if extracted) DESIGN-SYSTEM.md. Walk the 13-section architecture template at `workflow/docs-templates/ARCHITECTURE.md` in order.
 
-Present as a populated draft of `docs/ARCHITECTURE.md`:
+For each section:
+1. Generate draft based on inputs.
+2. Show: `What we chose / Why / Rejected / Implications / Triggers re-eval`.
+3. Gate type:
+   - **Hard-stop sections** (require explicit independent approval): §3 layered architecture, §4 state model, §5 navigation, §6 persistence, §10 boundaries.
+   - **Auto-accept sections** (proceed unless objection): §1, §2, §7, §8, §9, §11, §12, §13.
 
+Hard-stop output:
 ```
-## Overview
-[2–3 sentences: what the system does and its primary design intent]
+**§<N> — <Section name>**
+What I chose: <draft>
+Why: <reasoning>
+Rejected: <list>
+Implications: <list>
+Triggers re-eval: <condition>
 
-## Modules
-[Component] — [responsibility, one line]
-[Component] — [responsibility, one line]
-...
+Approve, edit, or reject?
+```
+⛔ STOP per hard-stop section. Independent approval gate.
 
-## Data Flows
-[Plain text description of how data moves through the system]
+Auto-accept output: brief draft, pause for objection only.
 
-[ASCII or markdown diagram if it adds clarity — optional]
-
-## External Integrations
-- [Service name] — [what it provides and when it is called]
-
-## Key Constraints
-- [constraint derived from project requirements or scale]
+On approval of all sections:
+```
+Architecture locked. Sections producing DECs: §<list>. Recording in Phase 6 as DEC-001..DEC-NNN.
 ```
 
-Ask: "Does this match your vision? What would you change?"
-
-⛔ STOP. Wait for response.
-
-Refine until developer approves. On approval:
-
-```
-Architecture locked. Moving to patterns.
-```
+Hold full architecture text (all 13 sections) — write VERBATIM in project-init-write, do not summarize.
 
 ---
 
 ## Phase 4 — Patterns selection
 
 Automatically select pattern files based on the approved stack:
-- Always include: `principles`, `arch`
-- Add files from `docs/patterns/PATTERNS.md` that match stack choices
+- Always include: principles, arch
+- If frontend_lang == typescript or backend_lang == typescript: typescript
+- If React or RN stack: state-management (always) + ask state library → exactly one of state-redux-toolkit | state-zustand
+- If RN stack: + reactnative, client-persistence
+- If Next.js: + nextjs (state-management already included by React rule)
+- If Python+FastAPI: fastapi, pytest
+- If Python+Django: django, pytest, sqlalchemy (if used)
+- Else: ask
+
+**State library question (only when React or RN is in stack):**
+
+```
+Which state library will this project use?
+- redux-toolkit — Redux with RTK + RTK Query, mature, opinionated
+- zustand — minimal, hooks-first, low boilerplate
+- other — name it, I'll skip the library file (you'll add the recipe later)
+```
+
+⛔ STOP. Wait for response. Record choice as `state_library`. If `redux-toolkit` → add `state-redux-toolkit` to includes. If `zustand` → add `state-zustand`. If `other` → include only `state-management` and note in DECs.
+
+**Persistence question (only when stack stores data on-device — RN, PWA, desktop):**
+
+`client-persistence` is auto-included for RN. For other stacks, ask: "Will this project persist data on-device?" yes → add `client-persistence`.
 
 Show:
 
@@ -197,7 +176,7 @@ Ask: "Anything to add or remove?"
 
 ⛔ STOP. Wait for response. "Looks good" or no objection is sufficient to proceed.
 
-Hold: list of selected pattern file stems (for `patterns_include` config key and for updating `docs/patterns/PATTERNS.md` index).
+Hold: list of selected pattern file stems (for `patterns_include` config key and for generating the project's `docs/PATTERNS.md` in `project-init-write`).
 
 ---
 
@@ -218,17 +197,12 @@ Is that the right starting point, or do you have something else in mind?
 
 ⛔ STOP. Wait for response.
 
-After developer approves or describes the first task, draft spec-000 using `specs/spec-template.md` exactly. Fill every section — no TBD, no empty sections:
-
-- **Goal** — what this first slice builds and why it proves the stack works
-- **Not in scope** — what is explicitly deferred to later specs
-- **Assumptions** — what the installed stack already provides
-- **Contracts** — function signatures and API shapes using the approved stack's types. Backend block uses `[backend_lang]`. Frontend block present only if frontend exists.
-- **Behaviour** — numbered steps for the happy path
-- **Failure paths** — at least one per external I/O (DB, external API)
-- **Files** — actual paths using `[backend_dir]`, `[frontend_dir]` config key placeholders
-- **Tests** — test names in `test_[unit]_[scenario]_[expected]` format
-- **Done when** — checklist using `[typecheck_cmd]`, `[lint_cmd]`, `[test_cmd]` placeholders
+After developer approves or describes the first task, draft spec-000 using `specs/spec-template.md` exactly. Fill every section in the template — no TBD, no empty sections. Specifically:
+- Contracts: signatures + types only, never bodies. Backend block uses `[backend_lang]`. Frontend block only if frontend exists.
+- Failure paths: at least one per external I/O (DB, external API).
+- Files: paths use `[backend_dir]` / `[frontend_dir]` placeholders.
+- Tests: names in `test_[unit]_[scenario]_[expected]` format.
+- Done when: checklist using `[typecheck_cmd]` / `[lint_cmd]` / `[test_cmd]` placeholders.
 
 Present the full draft.
 
@@ -253,23 +227,33 @@ A few values still need defaults:
 [...]
 ```
 
-**Decisions to record:** identify 3–5 key architectural decisions from the interview. Format:
+**Decisions to record (mandatory ≥5 entries for any non-trivial project):**
 
-```
-Decisions I'll record in docs/DECISIONS.md:
-DEC-001 — [decision] — [rationale]
-DEC-002 — [decision] — [rationale]
-[...]
-```
+For each architectural choice surfaced in Phase 3, draft a DEC entry following the schema at `workflow/docs-templates/DECISIONS.md`.
 
-**Project-specific rules:** derive 3–5 absolute rules implied by the architecture. Show:
+Required DECs:
+- State model (chosen pattern + rejected alternatives)
+- Persistence strategy
+- Navigation typing
+- Design system source-of-truth (if extracted)
+- Testing posture (test runner, unit-test policy; disabling unit tests REQUIRES explicit reason DEC)
 
-```
-Project rules I'll add to CLAUDE.md:
-- [rule — e.g. "Never expose internal database IDs in API responses"]
-- [rule — e.g. "All mutations must be idempotent — external services may retry"]
-- [rule — e.g. "No synchronous calls to external services in the HTTP request path"]
-```
+Each DEC MUST include either a `Verifies` rule (machine-checkable) or `Unverifiable: true` with reason.
+
+Show each DEC entry in full before writing.
+⛔ STOP per DEC. Independent approval gate.
+
+**Project rules (derived from stack, written into target project's CLAUDE.md by project-init-write):**
+
+For each tech-stack-applicable pattern selected in Phase 4, derive 3–5 absolute rules. Rules are self-contained, machine-checkable where possible, and absolute (no "should" / "prefer"). Required rule sources:
+- RN → reactnative.md: FlatList for >10-item lists, `useSafeAreaInsets()` not literal paddingTop, no inline `#hex` outside `src/constants/`.
+- TS → principles.md: max screen file 250 LOC, max function complexity 20.
+- Persistence → client-persistence.md: storage SDK calls only via typed wrappers; auth/secret values only via secure store.
+- State → state-management.md: per-screen domain hook instantiation forbidden; shared state lives in the chosen library's single store.
+
+Rendered as flat bullet list under "## Project Rules" in target CLAUDE.md.
+
+Show rules to user. ⛔ STOP. Independent approval gate.
 
 Ask: "Anything missing or wrong before I write everything?"
 
@@ -333,15 +317,21 @@ log_tail_frontend:
 
 ## Patterns
 patterns_include: 
+state_library: <!-- redux-toolkit | zustand | other | none — when frontend has React/RN -->
+client_persistence: <!-- yes | no — when project stores data on-device -->
+
+## Design
+design_source_path: 
+design_source_status: extracted | pointed | absent | deferred
 
 ## Decisions
 <!-- One entry per decision, DEC-NNN format -->
 
-## Project rules
-<!-- 3-5 project-specific absolute rules derived from architecture discussion -->
-
 ## Architecture
-<!-- Full architecture text as drafted and approved in Phase 3 -->
+<!-- Full 13-section architecture text from Phase 3, verbatim -->
+
+## Project rules
+<!-- Bullet list of stack-derived rules from Phase 6f -->
 
 ## Spec-000
 <!-- Full spec-000 content as drafted and approved in Phase 5 -->

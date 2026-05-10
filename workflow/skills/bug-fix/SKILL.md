@@ -22,9 +22,20 @@ Max attempts per bug: **3**
 
 1. All `bugs/bug-$ARGUMENTS-*.md` with status ⬜ Open
 2. `specs/$ARGUMENTS.md` — contracts (must not be violated)
-3. `docs/MAP.md` → load relevant ctx files for this spec
+3. `docs/MAP.md` → load relevant component READMEs / docs for this spec
 
 Check if `smoke-tests/$ARGUMENTS.md` exists — note for Step 2c.
+
+Classify bug type before fixing:
+
+| Type | Behavior |
+|------|----------|
+| `runtime` | Standard fix in code; existing flow. |
+| `ui-fidelity` | Cross-check against design-source-index.json. Fix MUST restore visual contract; verify with `ui-fidelity-check` after. |
+| `architecture-violation` | Spec implementation contradicts a DEC. Route to `decision-sync` to either fix code or supersede DEC. NEVER patch symptom in place. |
+| `contract-change` | Existing flow: stop, escalate. |
+
+Bug type MUST be set in the bug-fix attempt log.
 
 No open bugs found:
 ```
@@ -146,4 +157,4 @@ Bug Fix — $ARGUMENTS
 ```
 
 All fixed → `Next: /spec-smoke-test $ARGUMENTS`
-Escalated → `Resolve escalated bugs before /context-sync or /ship`
+Escalated → `Resolve escalated bugs before /decision-sync or /ship`
