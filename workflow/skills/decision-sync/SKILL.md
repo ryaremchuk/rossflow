@@ -32,6 +32,21 @@ On approval, write patches. Compute frontmatter on any updated/created README/DE
 - `synced_at_hash` = `find <sources> -type f -print0 | sort -z | xargs -0 cat | sha256sum`
 - `last_ai_review` = today
 
+**Autonomy log append:** For each context-update file processed in this run, append one row to `.claude/autonomy-log.md` (create file with header if missing):
+
+```
+| date | spec | autonomous_decisions | escalations | DECs_touched |
+|------|------|---------------------|-------------|--------------|
+| <YYYY-MM-DD> | <spec-name> | <count from "Decisions surfaced" section> | <count of items in spec PROGRESS.md or bug reports marked ⚠️ Escalated for this spec> | <DEC-NNN list from "Architecture / decision impact"> |
+```
+
+Counts:
+- `autonomous_decisions`: number of bullet items under "Decisions surfaced" in the context-update
+- `escalations`: count from `bugs/bug-<spec>-*.md` with `Status: ⚠️ Escalated`, plus any spec deviations marked "escalated" in PROGRESS.md
+- `DECs_touched`: comma-separated list of DEC-NNN ids from "Architecture / decision impact" section
+
+Purpose: gives the user a single auditable trail of "where the agent decided autonomously vs where it asked". Reviewable any time; never written to by other skills.
+
 ## Step 5 — Drift check
 For each `src/<*>/README.md`: recompute current hash of files in `sources` glob. If `current_hash != frontmatter.synced_at_hash`: flag `drift suspected; run /doc-check <component>`.
 

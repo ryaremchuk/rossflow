@@ -25,30 +25,41 @@ git branch --show-current
 If not on `[branch_prefix]/$ARGUMENTS` → abort. Output: `⛔ Wrong branch. Run: git checkout [branch_prefix]/$ARGUMENTS`
 
 Read in order:
-1. `specs/$ARGUMENTS.md` — full spec
-2. `PROGRESS.md` — if 🔄 In progress, list existing files first
-3. `docs/MAP.md` — identify component READMEs / docs for this spec, read them
-4. `smoke-tests/template.md` — needed for Step 5
-5. Files listed in spec's **Depends on**
-6. Context Search: Do not read the entirety of `PATTERNS.md` and `DECISIONS.md`. Instead, use your search tools (grep or equivalent) to search those files for keywords related to the current spec to find specific, relevant conventions. (e.g., if the spec is about billing, search for 'billing' or 'stripe').
-7. `docs/ARCHITECTURE.md` (full)
-8. `docs/DECISIONS.md` (full; at scale, paginate by §affects matching this spec)
-9. `docs/COMPONENT-LIBRARY.md` if exists
-10. `docs/DESIGN-SYSTEM.md` if exists
+1. `specs/$ARGUMENTS.md` — full contract spec
+2. `specs/plans/plan-$ARGUMENTS.md` — implementation plan (file list, DEC alignment, reuse mapping, risks, rollback). REQUIRED. If missing → abort. Output: `⛔ Plan file missing. Run /spec-create first or generate plan manually.`
+3. `smoke-tests/$ARGUMENTS-DRAFT.md` — pre-impl smoke test draft (your acceptance target while coding). REQUIRED. If missing → abort with same instruction.
+4. `PROGRESS.md` — if 🔄 In progress, list existing files first
+5. `docs/MAP.md` — identify component READMEs / docs for this spec, read them
+6. `smoke-tests/template.md` — needed for Step 5 refinement
+7. Files listed in plan's **Files to create or modify** + spec's **Depends on**
+8. Context Search: Do not read the entirety of `PATTERNS.md` and `DECISIONS.md`. Instead, use your search tools (grep or equivalent) to search those files for keywords related to the current spec to find specific, relevant conventions. (e.g., if the spec is about billing, search for 'billing' or 'stripe').
+9. `docs/ARCHITECTURE.md` — context-aware read:
+   - If file ≤ 800 lines → read full
+   - If file > 800 lines → read section index/TOC first, then read only sections matching the plan's `Architecture-fit statement` (e.g., §3, §10) plus any sections cited in the contract spec
+10. `docs/DECISIONS.md` — context-aware read:
+    - If file ≤ 800 lines → read full
+    - If file > 800 lines → grep for DEC-NNN ids cited in the plan's DEC alignment section, plus search for keywords from the spec scope. Read only matching DEC blocks
+11. `docs/COMPONENT-LIBRARY.md` if exists — read entries listed in plan's `Components consumed`
+12. `docs/DESIGN-SYSTEM.md` if exists
 
 ---
 
-## Step 2 — Plan + architecture-fit gate
+## Step 2 — Plan re-validation + architecture-fit gate
+
+The plan was approved at `/spec-create` time. Re-validate against current state — code may have drifted since then.
 
 Output:
-- **Files to create or modify:** <list>
-- **DEC alignment:** for each affecting DEC, state how plan honors it. If violated → STOP; propose supersession.
-- **Components consumed:** list from COMPONENT-LIBRARY.md. Reuse ratio = imported_library_components / total_visible_ui_elements. For screen specs: ≥0.6. Below → reject plan.
-- **New patterns introduced:** any not in PATTERNS.md. Must either be already documented or accompanied by post-implement proposal.
-- **Architecture-fit statement:** "Implements <layer> per Architecture §<N>. Does not violate boundaries §10. Assumes DEC-<list>. New components: <list or none>."
-- **Ambiguities or conflicts:** with proposed resolution.
+- **Plan file:** `specs/plans/plan-$ARGUMENTS.md` (loaded in Step 1)
+- **Re-validation against current state:**
+  - Files in plan still exist where expected? (or are flagged for create) ✅ / ⚠️ <diff>
+  - DEC alignment still valid? Run targeted check on each DEC the plan cites — any now violated by other recent specs? ✅ / ⚠️ <list>
+  - Components consumed still in COMPONENT-LIBRARY.md? ✅ / ⚠️ <missing>
+  - In-progress overlap from PROGRESS.md still relevant? ✅ / ⚠️ <new overlaps>
+  - Risks from plan still apply? Any new risks surfaced by recent commits? ✅ / additional risks: <list>
 
-👤 Action needed: independent approval gate (apply approval-gate rules).
+If re-validation surfaces any ⚠️: explain what changed, propose plan amendments inline, and request re-approval. If clean: state "Plan re-validated, no drift" and proceed.
+
+👤 Action needed: independent approval gate (apply approval-gate rules). Confirm plan is still right OR confirm proposed amendments.
 ⛔ STOP. Wait for explicit confirmation in response to THIS gate.
 
 ---
@@ -92,11 +103,17 @@ Update PROGRESS.md.
 
 ---
 
-## Step 5 — Write smoke test
+## Step 5 — Refine smoke test from draft
 
-Write `smoke-tests/$ARGUMENTS.md` using `smoke-tests/template.md`.
+The draft `smoke-tests/$ARGUMENTS-DRAFT.md` was generated at `/spec-create` time as your acceptance target. Refine it into the final runnable smoke test.
 
-Base smoke test on the spec contract, NOT on what was built. If implementation deviated, deviation MUST be:
+1. Read `smoke-tests/$ARGUMENTS-DRAFT.md` (already in context from Step 1).
+2. Read `smoke-tests/template.md` for the full executable format.
+3. For each draft step, fill in concrete details: exact endpoint paths, exact request/response shapes, exact selectors, exact wait conditions, exact verification SQL.
+4. Add any additional steps required by the contract that the draft missed (failure paths, edge cases).
+5. Write `smoke-tests/$ARGUMENTS.md` (final, runnable) — do NOT delete the DRAFT (kept as audit trail of pre-impl intent).
+
+Base the final smoke test on the spec contract, NOT on what was built. If implementation deviated, deviation MUST be:
 1. Recorded in PROGRESS.md
 2. Justified in context update (Step 6)
 3. Either reverted, escalated, or formalized as DEC

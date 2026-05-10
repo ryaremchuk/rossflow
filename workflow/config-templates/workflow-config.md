@@ -19,6 +19,7 @@ test_cmd:               # e.g. uv run pytest {test_dir} -v --tb=short
 frontend_typecheck_cmd: # e.g. npx tsc --noEmit | none
 frontend_lint_cmd:      # e.g. npx eslint src/ --ext .ts,.tsx | none
 frontend_test_cmd:      # e.g. npm test -- --watchAll=false | none
+sast_cmd:               # e.g. semgrep --config=auto {files} | bandit -r {files} | none — used by /code-audit
 
 ## Directories
 backend_dir:            # e.g. backend

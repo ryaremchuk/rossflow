@@ -13,6 +13,8 @@ Read the following files before executing this skill. All commands, paths, tool 
 
 Commit, push, open PR.
 
+`/smoke-all` is NOT auto-invoked. Run it manually when you want to gate a ship on regression results.
+
 ---
 
 ## Step 1 — Understand changes

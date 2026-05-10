@@ -16,7 +16,7 @@ Then open Claude Code in your project and run:
 
 ## How it works
 
-`install.sh` copies rossflow skills into `.claude/skills/` and asset folders into `.claude/rossflow/`. `/workflow-init` scaffolds `docs/`, `specs/`, `bugs/`, `smoke-tests/`, places config + doc templates, and wires `CLAUDE.md` to reference `workflow-instructions.md` (only — config files load on-demand). It then hands off to `/project-init-new`, which interviews you about stack, architecture, design source, and patterns, and writes a session file. `/project-init-write` reads that session, requires CONFIRM, and generates every project file (config, ARCHITECTURE.md, DECISIONS.md, PATTERNS.md, MAP.md, spec-000, project-specific CLAUDE.md rules). After that you cycle: `/spec-create` → `/spec-implement` → `/spec-smoke-and-fix` → `/decision-sync` → `/ship`.
+`install.sh` copies rossflow skills into `.claude/skills/` and asset folders into `.claude/rossflow/`. `/workflow-init` scaffolds `docs/`, `specs/`, `specs/plans/`, `specs/proposed/`, `bugs/`, `smoke-tests/`, `smoke-tests/regression/`, places config + doc templates, and wires `CLAUDE.md` to reference `workflow-instructions.md` (only — config files load on-demand). It then hands off to `/project-init-new`, which interviews you about stack, architecture, design source, and patterns, and writes a session file. `/project-init-write` reads that session, requires CONFIRM, and generates every project file (config, ARCHITECTURE.md, DECISIONS.md, PATTERNS.md, MAP.md, spec-000, project-specific CLAUDE.md rules). After that you cycle: `/spec-create` → `/spec-implement` → `/spec-smoke-and-fix` → `/decision-sync` → `/ship`. Periodically (every 5–10 specs): `/code-audit` for tech-debt visibility and `/discover-smoke-scenarios` to refresh frozen regression baselines.
 
 ## Skills
 
@@ -30,8 +30,8 @@ Then open Claude Code in your project and run:
 ### Specs
 | Skill | Purpose |
 |-------|---------|
-| `/spec-create` | Generate a spec with outline approval, DEC alignment check, validation, branch checkout. Auto-runs `/decision-verify` first. |
-| `/spec-implement` | Implement a spec: read context, plan with architecture-fit gate, lint/typecheck/test cycles, simplify pass, write smoke test + context update. |
+| `/spec-create` | Conversational discovery → outline approval → 3-artifact write (contract spec + implementation plan + draft smoke test). Auto-runs `/decision-verify` first. Surfaces overlap with in-progress specs. |
+| `/spec-implement` | Implement a spec: read context (plan + draft smoke required), re-validate plan against current state, lint/typecheck/test cycles, simplify pass, refine draft smoke into final, write context update. |
 | `screen-implement` | Variant of spec-implement for `type: screen` specs. Enforces design-fidelity, reuses COMPONENT-LIBRARY entries, auto-runs ui-fidelity-check. |
 
 ### Quality
@@ -39,7 +39,10 @@ Then open Claude Code in your project and run:
 |-------|---------|
 | `/spec-smoke-test` | Run a spec's smoke tests (HTTP/DB/UI), file bug reports for failures, summarise. |
 | `/spec-smoke-and-fix` | Orchestrate smoke-test → bug-fix loop, max 3 cycles. Spawns one `/bug-fix` subagent per bug. |
+| `/smoke-all` | Run every per-spec smoke test + every frozen regression baseline. Hard-blocks `/ship` on any failure. Use after each spec impl to catch cross-spec regressions. |
+| `/discover-smoke-scenarios` | Generate fresh regression scenarios for a module/spec from current source + DECs + specs. Approved scenarios are frozen as a baseline at `smoke-tests/regression/`. Re-runs produce diffs against baseline (deterministic by design). |
 | `/bug-fix` | Severity-ordered bug fix with classification (runtime / ui-fidelity / architecture-violation / contract-change), max 3 attempts per bug. |
+| `/code-audit` | SAST + LLM diff scan over recent changes. Aggregates findings by module, drafts refactor spec stubs at `specs/proposed/`. Run every 5–10 specs. |
 | `ui-fidelity-check` | Visual + structural diff vs design source (token audit, asset audit, label/numeric audit, screenshot diff). Files bugs on failure. |
 
 ### Sync & verify
@@ -54,7 +57,7 @@ Then open Claude Code in your project and run:
 ### Ship
 | Skill | Purpose |
 |-------|---------|
-| `/ship` | Commit all changes, push, open PR to main. |
+| `/ship` | Commit all changes, push, open PR to main. Does NOT auto-invoke `/smoke-all` — run manually when you want a regression gate. |
 
 ## Concepts
 
@@ -73,10 +76,22 @@ If a design source folder is detected (`design/`, `figma-export/`, `mockups/`, `
 ### Component context (auto-generated)
 `docs/MAP.md` is a generated index of per-component READMEs. `decision-sync` regenerates it from `find src -name README.md` on every run. Spec-implement reads MAP first, then opens any READMEs the spec touches — no manual maintenance needed.
 
+### Three-artifact spec output
+`/spec-create` writes three files per spec, each reviewed independently:
+- `specs/spec-NNN-name.md` — **contract spec** (signatures, behavior, failure paths). Reviewed for "is the contract right?"
+- `specs/plans/plan-spec-NNN-name.md` — **implementation plan** (file list, DEC alignment, reuse mapping, risks, rollback). Reviewed for "is the plan right?" Re-validated by `/spec-implement` Step 2 against current state.
+- `smoke-tests/spec-NNN-name-DRAFT.md` — **pre-impl smoke test** (acceptance target while coding). Refined into final `smoke-tests/spec-NNN-name.md` by `/spec-implement` Step 5.
+
+### Regression baseline freeze
+`/discover-smoke-scenarios` produces module/spec scenario sets from current source. Approved scenarios are frozen at `smoke-tests/regression/<scope>.md` with `frozen_at_sha` frontmatter. Subsequent `/discover-smoke-scenarios` runs produce **diffs** against the frozen baseline (Stable / Modified / Added / Removed) — never a wholesale regeneration unless `--refresh` is passed. This keeps regression results deterministic and signal-rich. `/smoke-all` runs both per-spec smokes and frozen baselines.
+
+### Conversational spec discovery
+`/spec-create` Step 3 surfaces affected DECs, candidate implementation paths with tradeoffs, in-progress spec overlaps, and a 🔴 watch-list — all BEFORE drafting the outline. The user picks a direction; the outline drafts with that direction baked in. The 🔴 hard-stop bypass phrase ("ignore flag, proceed anyway, accept risk") is negotiated at discovery, not at outline.
+
 ## What's included
 
-- **Skills (16)**: see table above.
+- **Skills (19)**: see tables above.
 - **Patterns** (`patterns/`): principles, arch, typescript, reactnative, nextjs, state-management, state-redux-toolkit, state-zustand, client-persistence, fastapi, django, sqlalchemy, pytest. Plus `INDEX.md` routing index.
-- **Templates** (`templates/`): spec, smoke-test, bug, decisions, pr-description, screen-spec, component-readme.
+- **Templates** (`templates/`): spec, plan, smoke-test, smoke-test-draft, bug, decisions, pr-description, screen-spec, component-readme.
 - **Doc templates** (`docs-templates/`): ARCHITECTURE, DECISIONS, MAP (generated), DESIGN-SYSTEM, COMPONENT-LIBRARY, PROGRESS.
-- **Config templates** (`config-templates/`): workflow-config, workflow-infra, workflow-git, workflow-smoke. Loaded on-demand by skills, not inlined in CLAUDE.md.
+- **Config templates** (`config-templates/`): workflow-config (now includes `sast_cmd`), workflow-infra, workflow-git, workflow-smoke. Loaded on-demand by skills, not inlined in CLAUDE.md.
