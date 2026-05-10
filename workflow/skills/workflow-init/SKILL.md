@@ -40,7 +40,11 @@ Create each directory if it does not already exist. Never overwrite existing con
 ```bash
 mkdir -p docs
 mkdir -p specs/updates
+mkdir -p specs/plans
+mkdir -p specs/proposed
 mkdir -p smoke-tests
+mkdir -p smoke-tests/regression
+mkdir -p smoke-tests/regression/_archive
 mkdir -p bugs
 mkdir -p .rossflow
 ```
@@ -83,7 +87,9 @@ For each file, check if the destination already exists. Copy only if it does not
 
 Files to place:
 - `spec-template.md` → `specs/spec-template.md`
+- `plan-template.md` → `specs/plans/template.md`
 - `smoke-test-template.md` → `smoke-tests/template.md`
+- `smoke-test-draft.md` → `smoke-tests/draft-template.md`
 - `bug-template.md` → `bugs/template.md`
 
 Report each file: `placed` or `skipped (already exists)`.
@@ -193,18 +199,18 @@ Print this table, filling in the actual status from each step:
 ```
 rossflow init — summary
 ───────────────────────────────────────────────────────────
- Item                  Status
+ Item                       Status
 ───────────────────────────────────────────────────────────
- docs/ structure       created / already existed
- specs/ structure      created / already existed
- smoke-tests/          created / already existed
- bugs/                 created / already existed
- Docs templates        placed / skipped (N existing)
- Operational templates placed / skipped (N existing)
- Config files          placed / skipped (N existing)
- Patterns library      placed / skipped (N existing)
- CLAUDE.md             created / updated / already wired
- PROGRESS.md           created / already existed
+ docs/ structure            created / already existed
+ specs/ + plans/ + proposed created / already existed
+ smoke-tests/ + regression/ created / already existed
+ bugs/                      created / already existed
+ Docs templates             placed / skipped (N existing)
+ Operational templates      placed / skipped (N existing)
+ Config files               placed / skipped (N existing)
+ Patterns library           placed / skipped (N existing)
+ CLAUDE.md                  created / updated / already wired
+ PROGRESS.md                created / already existed
 ───────────────────────────────────────────────────────────
 ```
 

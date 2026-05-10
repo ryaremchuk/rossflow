@@ -15,6 +15,22 @@ Commit, push, open PR.
 
 ---
 
+## Step 0 — Regression gate
+
+Invoke `/smoke-all`. If exit status is non-zero → STOP. Output:
+
+```
+⛔ /ship blocked — regression suite has failures.
+See bug reports filed in [bugs_dir]/ from /smoke-all run.
+Run /spec-smoke-and-fix or /bug-fix on failing specs, then retry /ship.
+```
+
+Do NOT bypass with any flag. Failures block ship by design.
+
+If `/smoke-all` exits clean → continue to Step 1.
+
+---
+
 ## Step 1 — Understand changes
 
 Run in parallel:
