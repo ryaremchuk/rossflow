@@ -1,6 +1,6 @@
 ---
 name: spec-smoke-and-fix
-description: Automated smoke test + bug fix loop for a spec. Runs smoke tests, fixes each bug in its own subagent, repeats until clean or 3 cycles exhausted.
+description: Orchestrate the smoke-test → bug-fix → repeat loop for a spec. Invokes /spec-smoke-test, then spawns one /bug-fix subagent per open bug, repeats until clean or 3 cycles exhausted.
 ---
 
 ## Config
@@ -14,6 +14,8 @@ Read the following files before executing this skill. All commands, paths, tool 
 Run smoke-and-fix loop for: `$ARGUMENTS`
 
 Max cycles: **3**
+
+This skill is a thin orchestrator. It does NOT execute smoke-test steps itself — it invokes `/spec-smoke-test`. It does NOT classify bugs — each bug is delegated to a `/bug-fix` subagent which owns classification and routing.
 
 ---
 
@@ -32,36 +34,24 @@ Initialize:
 
 ---
 
-## Cycle loop
+## Cycle loop (repeat while `CYCLE <= 3`)
 
-Repeat while `CYCLE <= 3`:
-
----
-
-### Phase 1 — Smoke Test
+### Phase 1 — Smoke test
 
 Print:
 ```
 🧪 Cycle <CYCLE>/3 — Smoke Test starting...
 ```
 
-Read `.claude/skills/spec-smoke-test/SKILL.md` and follow all instructions exactly, with `$ARGUMENTS` as the spec name.
+Invoke `/spec-smoke-test $ARGUMENTS`. Wait for it to finish.
 
-This will:
-- Ensure Docker is running
-- Execute all steps from `smoke-tests/$ARGUMENTS.md`
-- Create bug reports in `bugs/` for any failures
-- Print the step summary
-
-After smoke test completes, collect results:
-- Count steps: total, passed, failed
-- Scan `bugs/bug-$ARGUMENTS-*.md` — find all with status `⬜ Open`
-- Record open bug list: filename + title + severity
+After it returns, collect results from the filesystem:
+- Scan `bugs/bug-$ARGUMENTS-*.md` for entries with status `⬜ Open`.
+- Record open bug list: filename + title + severity.
 
 Print:
 ```
 🧪 Cycle <CYCLE>/3 — Smoke Test complete
-   Steps: <total> | ✅ <passed> | ❌ <failed>
    Open bugs: <N>
 ```
 
@@ -71,9 +61,7 @@ If zero open bugs:
 ```
 Go to **Final Summary** with status CLEAN.
 
----
-
-### Phase 2 — Bug Fix (subagents)
+### Phase 2 — Bug fix (subagents)
 
 Print:
 ```
@@ -86,72 +74,51 @@ Sort open bugs: 🔴 → 🟡 → 🟢 (by severity in bug report header).
 
 For each open bug (sequentially):
 
-#### Spawn subagent
-
 Print:
 ```
   → Spawning subagent for: <bug-filename> — <title> [severity]
 ```
 
-Spawn a Task subagent with this prompt (substitute actual values):
+Spawn a Task subagent. The prompt body lives in `.claude/skills/spec-smoke-and-fix/subagent-prompt.md` — read it, substitute:
+- `$SPEC` → `$ARGUMENTS`
+- `$BUG_FILE` → the bug's full path (`bugs/bug-$ARGUMENTS-<NN>.md`)
 
-```
-You are fixing one bug in the [project_name] project.
-
-Spec: $ARGUMENTS
-Bug report: bugs/bug-$ARGUMENTS-<NN>.md
-
-Instructions:
-1. Read .claude/skills/bug-fix/SKILL.md
-2. Read bugs/bug-$ARGUMENTS-<NN>.md
-3. Follow the bug-fix skill instructions exactly for this single bug report only.
-   - Do not fix any other bugs
-   - Do not run smoke tests
-   - Update the bug report with outcome (✅ Fixed or ⚠️ Escalated)
-4. When done, print one final line:
-   RESULT: [FIXED|ESCALATED] — <one sentence summary>
-```
+Do NOT inline different instructions. Any classification or routing logic belongs in `/bug-fix`, not here.
 
 Wait for subagent to complete.
 
-#### Read outcome
+Read the updated bug file's status field:
+- `✅ Fixed` → record as fixed, print `  ✅ Fixed: <title>`.
+- `⚠️ Escalated` → add to `ESCALATED_BUGS`, print `  ⚠️ Escalated: <title>`.
 
-Read updated `bugs/bug-$ARGUMENTS-<NN>.md` — check status field:
-- `✅ Fixed` → record as fixed, print `  ✅ Fixed: <title>`
-- `⚠️ Escalated` → add to `ESCALATED_BUGS`, print `  ⚠️ Escalated: <title>`
+Continue to next bug regardless of outcome.
 
-Continue to next bug regardless of outcome (finish all bugs in this cycle).
-
-#### After all bugs processed
-
-Print:
+After all bugs processed:
 ```
 🔧 Cycle <CYCLE>/3 — Bug Fix complete
    ✅ Fixed: <N> | ⚠️ Escalated: <N>
 ```
 
-If `ESCALATED_BUGS` is not empty, print escalation notice (but do NOT stop — cycle will still repeat for non-escalated bugs):
+If `ESCALATED_BUGS` is not empty (do NOT stop — cycle still repeats for non-escalated bugs):
 ```
 ⚠️  Escalated bugs require human review:
     <list of escalated bug filenames>
     These will not be retried in subsequent cycles.
 ```
 
----
-
 ### Phase 3 — Cycle decision
 
 If `CYCLE < 3`:
-- Increment `CYCLE`
+- Increment `CYCLE`.
 - Print:
   ```
   ↩️  Repeating — starting cycle <CYCLE>/3
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ```
-- Go to **Phase 1**
+- Go to **Phase 1**.
 
 If `CYCLE == 3`:
-- Go to **Final Summary** with status EXHAUSTED
+- Go to **Final Summary** with status EXHAUSTED.
 
 ---
 
@@ -168,7 +135,7 @@ Cycles run: <N>/3
 ```
 ✅ All smoke test steps passing. No open bugs.
 
-Next: /context-sync → /ship
+Next: /decision-sync → /ship
 ```
 
 ### If status EXHAUSTED:
@@ -185,5 +152,5 @@ Scan all `bugs/bug-$ARGUMENTS-*.md` — count by final status.
 Next steps:
   - Review escalated bugs in Claude.ai (Deep Spec Dive)
   - For open bugs: add context and run /bug-fix $ARGUMENTS manually
-  - Do NOT run /context-sync or /ship until all bugs resolved
+  - Do NOT run /decision-sync or /ship until all bugs resolved
 ```

@@ -13,38 +13,15 @@ function processOrder(order) {
   return buildReceipt(order, total);
 }
 ```
-
-DON'T:
-```
-function processOrder(order) {
-  if (!order.id) throw new Error('missing id');
-  if (!order.items.length) throw new Error('no items');
-  let total = 0;
-  for (const item of order.items) {
-    if (item.discount) {
-      total += item.price * (1 - item.discount);
-    } else {
-      total += item.price;
-    }
-  }
-  // ... 15 more lines of mixed logic
-}
-```
+DON'T: 30-line function mixing validation, summation, formatting in one body.
 
 ---
 
 ### Parameter Count — Max 3, Then Options Object
 Beyond 3 params, callers forget argument order. Use a named object.
 
-DO:
-```
-function createUser({ name, email, role, orgId }) { ... }
-```
-
-DON'T:
-```
-function createUser(name, email, role, orgId) { ... }
-```
+DO: `function createUser({ name, email, role, orgId }) { ... }`
+DON'T: `function createUser(name, email, role, orgId) { ... }`
 
 ---
 
@@ -60,41 +37,15 @@ function getDiscount(user) {
   return 0.15;
 }
 ```
-
-DON'T:
-```
-function getDiscount(user) {
-  if (user) {
-    if (user.isActive) {
-      if (user.isPremium) {
-        return 0.15;
-      } else {
-        return 0.05;
-      }
-    }
-  }
-  return 0;
-}
-```
+DON'T: pyramid of nested `if (user) { if (active) { if (premium) ... } }`.
 
 ---
 
 ### Naming — Verbs, Prefixes, No Abbreviations
 Functions: verb phrases. Booleans: `is`/`has`/`can`/`should` prefix. No abbreviations except `id`, `url`, `db`.
 
-DO:
-```
-function fetchUserById(id) { ... }
-const isActive = user.status === 'active';
-const hasPermission = checkRole(user, 'admin');
-```
-
-DON'T:
-```
-function userData(u) { ... }
-const active = user.status === 'active';
-const perm = checkRole(usr, 'adm');
-```
+DO: `fetchUserById(id)`, `const isActive = ...`, `const hasPermission = ...`
+DON'T: `userData(u)`, `const active = ...`, `const perm = checkRole(usr, 'adm')`
 
 ---
 
@@ -103,64 +54,31 @@ Business logic is pure: input in, output out, no hidden state. Side effects (DB,
 
 DO:
 ```
-# pure — testable in isolation
 def apply_discount(price: float, rate: float) -> float:
     return price * (1 - rate)
 
-# boundary — side effects contained here only
-async def update_order_price(order_id: str, rate: float) -> None:
+async def update_order_price(order_id, rate):
     order = await db.orders.get(order_id)
     order.total = apply_discount(order.total, rate)
     await db.orders.save(order)
 ```
-
-DON'T:
-```
-async def apply_discount(order_id: str, rate: float) -> None:
-    order = await db.orders.get(order_id)       # side effect buried in logic
-    order.total = order.total * (1 - rate)
-    await db.orders.save(order)
-    await email.send(order.user_id, 'discount applied')
-```
+DON'T: bury `db.orders.get` and `email.send` inside `apply_discount`.
 
 ---
 
 ### DRY Threshold — Extract at 3 Duplications, Not Before
 Two identical blocks might be coincidence. Three is a pattern. Extract then, not sooner.
 
-DO:
-```
-# third occurrence appears → extract now
-function formatCurrency(amount, currency) {
-  return `${currency}${amount.toFixed(2)}`;
-}
-```
-
-DON'T:
-```
-# premature extraction after seeing it once or twice
-function formatCurrency(amount) { ... }  # abstraction not yet proven necessary
-```
+DO: extract `formatCurrency(amount, currency)` after the third call site appears.
+DON'T: extract on the first or second occurrence — abstraction not yet proven necessary.
 
 ---
 
 ### YAGNI — Build What the Spec Requires, Nothing Else
 No "we'll probably need" code. No plugin systems for one use case. No abstract bases with one subclass.
 
-DO:
-```
-function sendEmail(to, subject, body) {
-  return mailer.send({ to, subject, body });
-}
-```
-
-DON'T:
-```
-class NotificationService {
-  constructor(adapter) { this.adapter = adapter; }  // no second adapter exists
-  send(channel, payload) { ... }                    // "for future channels"
-}
-```
+DO: `function sendEmail(to, subject, body) { return mailer.send({ to, subject, body }); }`
+DON'T: `class NotificationService` with `adapter` constructor for "future channels" that don't exist.
 
 ---
 
@@ -172,31 +90,15 @@ DO:
 # Stripe requires idempotency key to be unique per 24h retry window
 key = f"{order_id}-{int(time.time() // 86400)}"
 ```
-
-DON'T:
-```
-# loop through items and sum prices
-total = 0
-for item in items:
-    total += item.price  # add price to total
-```
+DON'T: `# loop through items and sum prices` above an obvious for-loop.
 
 ---
 
 ### Single Responsibility — One Module, One Reason to Change
 If a module changes for two different reasons, it has two responsibilities. Split it.
 
-DO:
-```
-user_validator.py   # changes when validation rules change
-user_repository.py  # changes when DB schema changes
-user_service.py     # changes when business rules change
-```
-
-DON'T:
-```
-user.py  # validates input, queries DB, sends emails, formats responses
-```
+DO: `user_validator.py` (validation), `user_repository.py` (DB), `user_service.py` (business rules).
+DON'T: one `user.py` that validates, queries, emails, and formats responses.
 
 ---
 
@@ -206,23 +108,12 @@ More than 4 conditions → extract predicates or use a dispatch table.
 DO:
 ```
 handlers = {
-  'created':   handle_created,
-  'updated':   handle_updated,
-  'deleted':   handle_deleted,
-  'cancelled': handle_cancelled,
+  'created': handle_created, 'updated': handle_updated,
+  'deleted': handle_deleted, 'cancelled': handle_cancelled,
 }
 handlers[event.type](event)
 ```
-
-DON'T:
-```
-def handle_event(event):
-    if event.type == 'created': ...
-    elif event.type == 'updated': ...
-    elif event.type == 'deleted': ...
-    elif event.type == 'cancelled': ...
-    elif event.type == 'expired': ...
-```
+DON'T: long `if/elif` chain on `event.type`.
 
 ---
 
@@ -243,3 +134,12 @@ Interface with one implementation. Factory for one product. Template method with
 ### Magic Numbers
 `if (retries > 3)` or `setTimeout(fn, 2000)` with no explanation.
 → Named constant with a comment explaining where the value comes from.
+
+---
+
+## Hard caps (enforced by /simplify and CI)
+
+- **Max file LOC: 250** for any single source file. Excess → must extract sub-modules / sub-components.
+- **Max cyclomatic complexity per function: 20**. Excess → split or refactor.
+
+Caps are auto-checked by `/simplify` (which reads this file) and may be enforced as DEC `verifies` rules.
