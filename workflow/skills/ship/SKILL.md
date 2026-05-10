@@ -13,21 +13,7 @@ Read the following files before executing this skill. All commands, paths, tool 
 
 Commit, push, open PR.
 
----
-
-## Step 0 — Regression gate
-
-Invoke `/smoke-all`. If exit status is non-zero → STOP. Output:
-
-```
-⛔ /ship blocked — regression suite has failures.
-See bug reports filed in [bugs_dir]/ from /smoke-all run.
-Run /spec-smoke-and-fix or /bug-fix on failing specs, then retry /ship.
-```
-
-Do NOT bypass with any flag. Failures block ship by design.
-
-If `/smoke-all` exits clean → continue to Step 1.
+`/smoke-all` is NOT auto-invoked. Run it manually when you want to gate a ship on regression results.
 
 ---
 

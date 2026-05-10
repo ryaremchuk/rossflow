@@ -1,6 +1,6 @@
 ---
 name: smoke-all
-description: Run all per-spec smoke tests and all frozen regression baselines in sequence. Files bug reports for failures. Hard-blocks /ship Step 0 if any failure. Use after every spec impl to catch cross-spec regressions.
+description: Run all per-spec smoke tests and all frozen regression baselines in sequence. Files bug reports for failures. Manual trigger — not auto-invoked by /ship. Use when you want to verify nothing has regressed before shipping.
 ---
 
 ## Config
@@ -99,14 +99,14 @@ Per-spec smokes:
 Bug reports filed: <N> at [bugs_dir]/
 
 Decision:
-  - All clean → /ship is unblocked
-  - Failures present → /ship is BLOCKED. Run /spec-smoke-and-fix or /bug-fix on the failing specs first.
+  - All clean → safe to /ship if you want
+  - Failures present → consider running /spec-smoke-and-fix or /bug-fix on failing specs before /ship. Your call — /ship does NOT auto-block.
 ```
 
 ---
 
 ## Step 5 — Exit status
 
-If any failure: exit non-zero. `/ship` Step 0 reads this exit status and refuses to proceed.
+If any failure: exit non-zero (signal only — useful if scripted, but no skill auto-reads this).
 
 If all pass: exit 0.

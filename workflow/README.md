@@ -57,7 +57,7 @@ Then open Claude Code in your project and run:
 ### Ship
 | Skill | Purpose |
 |-------|---------|
-| `/ship` | Step 0 invokes `/smoke-all` (regression gate, blocks on failure). Then commit, push, open PR to main. |
+| `/ship` | Commit all changes, push, open PR to main. Does NOT auto-invoke `/smoke-all` — run manually when you want a regression gate. |
 
 ## Concepts
 
