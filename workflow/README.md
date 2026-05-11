@@ -25,7 +25,8 @@ Then open Claude Code in your project and run:
 |-------|---------|
 | `/workflow-init` | Scaffold directories, place templates and configs, wire CLAUDE.md, then call project-init-new. |
 | `/project-init-new` | Structured interview: stack, architecture, design source, patterns, spec-000. Writes a session file only. |
-| `/project-init-write` | Reads the session file and writes all project files after CONFIRM. |
+| `/project-init-write` | Reads the session file and writes all project files after CONFIRM. Auto-invokes `/tools-bootstrap` at the end. |
+| `/tools-bootstrap` | Check, install, and set up all tools required by the project's tech stack (git, runtimes, DB clients, test drivers, etc). Idempotent — re-run anytime the stack changes. |
 
 ### Specs
 | Skill | Purpose |
@@ -90,7 +91,7 @@ If a design source folder is detected (`design/`, `figma-export/`, `mockups/`, `
 
 ## What's included
 
-- **Skills (19)**: see tables above.
+- **Skills (20)**: see tables above.
 - **Patterns** (`patterns/`): principles, arch, typescript, reactnative, nextjs, state-management, state-redux-toolkit, state-zustand, client-persistence, fastapi, django, sqlalchemy, pytest. Plus `INDEX.md` routing index.
 - **Templates** (`templates/`): spec, plan, smoke-test, smoke-test-draft, bug, decisions, pr-description, screen-spec, component-readme.
 - **Doc templates** (`docs-templates/`): ARCHITECTURE, DECISIONS, MAP (generated), DESIGN-SYSTEM, COMPONENT-LIBRARY, PROGRESS.
