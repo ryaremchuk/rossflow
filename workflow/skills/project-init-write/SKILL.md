@@ -151,7 +151,19 @@ spec-003+ feature/screen specs come later via `/spec-create`.
 
 Update `.claude/project-init-session.md`: change `_Status: awaiting-confirm_` to `_Status: complete_`.
 
+---
+
+## Step 5 — Bootstrap tools
+
 Print:
+
+```
+── tools-bootstrap ────────────────────────────────────
+```
+
+Invoke `/tools-bootstrap`. This checks and installs all tools required by the project's tech stack. The skill will prompt before installing anything.
+
+After `/tools-bootstrap` completes, print:
 
 ```
 ✅ project-init-write complete.
